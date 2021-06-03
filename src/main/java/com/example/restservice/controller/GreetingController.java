@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.dao.impl.MOMDAOImpl;
-import com.example.restservice.entity.Greeting;
+import com.example.restservice.model.Greeting;
 
 @RestController
 public class GreetingController {
