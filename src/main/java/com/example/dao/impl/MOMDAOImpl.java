@@ -9,11 +9,15 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.example.constants.MOMConstants;
 import com.example.dao.MOMDAO;
+import com.example.restservice.model.House;
 import com.example.restservice.model.Household;
 import com.example.restservice.model.HouseholdMember;
 import com.example.restservice.model.HouseholdNoSpouse;
@@ -53,7 +57,6 @@ public class MOMDAOImpl implements MOMDAO {
         
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
-//            ps.setInt(1, custId);
             ResultSet rs = ps.executeQuery();
             
             while (rs.next()) {
@@ -107,13 +110,14 @@ public class MOMDAOImpl implements MOMDAO {
 	
 	@Override
 	public int insertPerson(Connection conn, String name, String gender, String maritalid,
-			String spouse, String occupationid, double annualincome, Date dob) {
+			String spouse, String occupationid, double annualincome, Date dob, int houseid) {
 		
 		int createdId = -1;
 		
         String sql = "insert into PERSON (name, gender, maritalid, spouse, occupationid,"
         		+ "annualincome, dob) VALUES (?,?,?,?,?,?,?)";
         
+        int affectedRows = 0;
         PreparedStatement ps;
 		try {
 			ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
@@ -124,7 +128,7 @@ public class MOMDAOImpl implements MOMDAO {
 	        ps.setString(5, occupationid);
 	        ps.setDouble(6, annualincome);
 	        ps.setTimestamp(7, new Timestamp(dob.getTime()));
-	        int affectedRows = ps.executeUpdate();
+	        affectedRows = ps.executeUpdate();
 
 	        if (affectedRows == 0) {
 	        	System.out.println("Inserting PERSON failed, no rows affected.");
@@ -142,8 +146,60 @@ public class MOMDAOImpl implements MOMDAO {
 			System.out.println("Error in insertHouse(): " + e.getMessage());
         }
 		
+		if (!StringUtils.isBlank(spouse) && affectedRows > 0 && isSpouseLiveAtSameHouse(houseid, Integer.parseInt(spouse))) {
+			updatePerson(conn, Integer.parseInt(spouse), createdId);
+		}
+		
 		return createdId;
 	}
+	
+	private void updatePerson(Connection conn, int targetperson, int spouse) {
+		
+        String sql = "update person set spouse=? where personid=?";
+        
+        PreparedStatement ps;
+		try {
+			ps = conn.prepareStatement(sql);
+	        ps.setInt(1, spouse);
+	        ps.setInt(2, targetperson);
+	        ps.executeUpdate();
+
+	        ps.close();
+		} catch (SQLException e) {
+			System.out.println("Error in insertHouse(): " + e.getMessage());
+        }
+		
+	}
+	
+	private boolean isSpouseLiveAtSameHouse(int houseid, int personid) {
+		boolean ret = false;
+		
+        String sql = "select * from household hh, person p where hh.personid = p.personid "
+        		+ "and hh.houseid = ? and hh.personid = ? "
+        		+ "and p.maritalid='" + MOMConstants.MARITAL_ID_MARRIED + "' ";
+        Connection conn = getConnection(true);
+        
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, houseid);
+            ps.setInt(2, personid);
+            ResultSet rs = ps.executeQuery();
+            
+            if (rs.next())
+            	ret = true;
+            
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+			System.out.println("Error in isSpouseLiveAtSameHouse(): " + e.getMessage());
+            throw new RuntimeException(e);
+        } finally {
+        	closeConnection(conn);
+        }		
+		
+		return ret;
+	}
+
 		
 	@Override
 	public int insertHouseholdMember(int houseid, String name, String gender, String maritalid,
@@ -151,7 +207,7 @@ public class MOMDAOImpl implements MOMDAO {
 		
         Connection conn = getConnection(false);
 		
-		int personid = insertPerson(conn, name, gender, maritalid, spouse, occupationid, annualincome, dob);
+		int personid = insertPerson(conn, name, gender, maritalid, spouse, occupationid, annualincome, dob, houseid);
 
 		String sql = "insert into HOUSEHOLD (houseid, personid) VALUES (?,?)";
         PreparedStatement ps;
@@ -285,7 +341,7 @@ public class MOMDAOImpl implements MOMDAO {
 				if (i == 0) {
 					uniquehouseid = member.getHouseid();
 				} else if (uniquehouseid != member.getHouseid()) {
-					householdList.add(new Household(uniquehouseid, personList));
+					householdList.add(new Household(uniquehouseid, getHouseholdType(uniquehouseid), personList));
 					
 					uniquehouseid = member.getHouseid();
 					personList = new ArrayList<Person>();
@@ -293,7 +349,7 @@ public class MOMDAOImpl implements MOMDAO {
 				
 				personList.add(getPerson(member.getPersonid()));
 				if (i == housememberList.size()-1) {
-					householdList.add(new Household(uniquehouseid, personList));
+					householdList.add(new Household(uniquehouseid, getHouseholdType(uniquehouseid), personList));
 				}
 			}
 		}
@@ -303,117 +359,117 @@ public class MOMDAOImpl implements MOMDAO {
 	
 	@Override
 	public List<HouseholdNoSpouse> retrieveHouseholdNoSpouse(String houseid) {
-		List<HouseholdNoSpouse> householdList = null;
+		List<HouseholdNoSpouse> householdList = new ArrayList<HouseholdNoSpouse>();
 
 		List<HouseholdMember> housememberList = getHouseholdMembers(houseid);
 		if (housememberList != null) {
-			householdList = new ArrayList<HouseholdNoSpouse>();
 			
 			List<PersonNoSpouse> personList = new ArrayList<PersonNoSpouse>();
 			for (HouseholdMember member : housememberList) {
 				personList.add(getPersonNoSpouse(member.getPersonid()));
 			}
 			
-			householdList.add(new HouseholdNoSpouse(housememberList.get(0).getHouseid(), personList));
+			householdList.add(new HouseholdNoSpouse(getHouseholdType(housememberList.get(0).getHouseid()), personList));
 		}
 		
 		return householdList;
 	}
 	
-	private List<HouseholdMember> getHouseholdMembers(String houseid) {
-		List<HouseholdMember> ret = null;
+	@Override
+	public List<Household> retrieveGrantStudentEncBonus() {
+		final int agemax = 16;
+		final double totalincomemax = 150000.00;
+		final boolean isStudent = true;
 		
-		String sql = "SELECT * FROM HOUSEHOLD ";
-		if (!houseid.equalsIgnoreCase("all"))
-			sql += "WHERE HOUSEID=? ";
-		sql += "ORDER BY HOUSEID ASC";
+		List<Integer> eligibleHouseIncome = getHouseidWithTotalIncome("<", totalincomemax);
+		List<Household> eligibleHouseAge = getHouseWithPersonAge("<", agemax, isStudent);
+		
+		List<Household> resultList = new ArrayList<Household>();
 
-        Connection conn = getConnection(true);
-        
-        try {
-            PreparedStatement ps = conn.prepareStatement(sql);
-            if (!houseid.equalsIgnoreCase("all")) {
-                ps.setString(1, houseid);
-            }
-            ResultSet rs = ps.executeQuery();
-            
-            if (!rs.next()) {
-            	ret = null;
-            } else {
-            	ret = new ArrayList<HouseholdMember>();
-            	do {
-            		ret.add( new HouseholdMember(rs.getInt("houseid"), rs.getInt("personid")) );
-            	} while (rs.next());
-            }
-            
-            rs.close();
-            ps.close();
-        } catch (SQLException e) {
-			System.out.println("Error in getHouseholdMembers(): " + e.getMessage());
-            throw new RuntimeException(e);
-        } finally {
-        	closeConnection(conn);
-        }		
+		if (eligibleHouseIncome != null && eligibleHouseAge != null) {
+			for (int i=0; i<eligibleHouseAge.size(); i++) {
+				Household h = eligibleHouseAge.get(i);
+				
+				if (eligibleHouseIncome.contains(h.getHouseid())) {
+					resultList.add(h);
+				}
+			}
+		}
 		
-		return ret;
+		return resultList;
 	}
 	
-	private Person getPerson(int personid) {
-		Person ret = null;
+	@Override
+	public List<Household> retrieveGrantFamilyScheme() {
+		final int agemax = 18;
+		final boolean isStudent = false;
 		
-        String sql = "SELECT * FROM PERSON WHERE PERSONID=?";
-        Connection conn = getConnection(true);
-        
-        try {
-            PreparedStatement ps = conn.prepareStatement(sql);
-            ps.setInt(1, personid);
-            ResultSet rs = ps.executeQuery();
-            
-            if (rs.next())
-            	ret = new Person(rs.getString("name"), rs.getString("gender"), 
-            			rs.getString("maritalid"), rs.getInt("spouse"), rs.getString("occupationid"),
-            			rs.getDouble("annualincome"), new Date(rs.getTimestamp("dob").getTime()));
-            	
-            rs.close();
-            ps.close();
-        } catch (SQLException e) {
-			System.out.println("Error in getPerson(): " + e.getMessage());
-            throw new RuntimeException(e);
-        } finally {
-        	closeConnection(conn);
-        }		
+		List<Household> houseWithChild = getHouseWithPersonAge("<", agemax, isStudent);
+		List<Household> houseWithCouples = getHouseWithHusbandAndWife();
 		
-		return ret;
-	}
+		List<Household> resultList = new ArrayList<Household>();
 
-	private PersonNoSpouse getPersonNoSpouse(int personid) {
-		PersonNoSpouse ret = null;
+		if (houseWithChild != null && houseWithCouples != null) {
+			for (int i=0; i<houseWithCouples.size(); i++) {
+				Household h = houseWithCouples.get(i);
+				
+				for (int j=0; j<houseWithChild.size(); j++) {
+					Household hc = houseWithChild.get(j);
+					System.out.println("h.houseid: " + h.getHouseid() + ", hc.houseid: " + hc.getHouseid());
+					if (h.getHouseid() == hc.getHouseid()) {
+						System.out.println("child-parent connection found, add list");
+						List<Person> newlist = new ArrayList<Person>();
+						newlist.addAll(h.getMembers());
+						newlist.addAll(hc.getMembers());
+						resultList.add(new Household(h.getHouseid(), h.getHousetype(), newlist));
+						break;
+					}
+				}
+				
+			}
+		}
 		
-        String sql = "SELECT * FROM PERSON WHERE PERSONID=?";
-        Connection conn = getConnection(true);
-        
-        try {
-            PreparedStatement ps = conn.prepareStatement(sql);
-            ps.setInt(1, personid);
-            ResultSet rs = ps.executeQuery();
-            
-            if (rs.next())
-            	ret = new PersonNoSpouse(rs.getString("name"), rs.getString("gender"), 
-            			rs.getString("maritalid"), rs.getString("occupationid"),
-            			rs.getDouble("annualincome"), new Date(rs.getTimestamp("dob").getTime()));
-            	
-            rs.close();
-            ps.close();
-        } catch (SQLException e) {
-			System.out.println("Error in getPerson(): " + e.getMessage());
-            throw new RuntimeException(e);
-        } finally {
-        	closeConnection(conn);
-        }		
-		
-		return ret;
+		return resultList;
 	}
+	
+	@Override
+	public List<Household> retrieveGrantElderBonus() {
+		final int agemin = 50;
+		final boolean isStudent = false;
 
+		List<Integer> houseHDB = getHouseWithHouseType(MOMConstants.HOUSETYPE_HDB);
+		List<Household> houseWithElderly = getHouseWithPersonAge(">", agemin, isStudent);
+		
+		List<Household> resultList = new ArrayList<Household>();
+
+		if (houseHDB != null && houseWithElderly != null) {
+			for (int i=0; i<houseWithElderly.size(); i++) {
+				Household h = houseWithElderly.get(i);
+				
+				if (houseHDB.contains(h.getHouseid())) {
+					resultList.add(h);
+				}
+			}
+		}
+		
+		return resultList;
+	}
+	
+	@Override
+	public List<Household> retrieveGrantBabySunshine() {
+		final int agemax = 5;
+		final boolean isStudent = false;
+
+		return getHouseWithPersonAge("<", agemax, isStudent);
+	}
+	
+	@Override
+	public List<House> retrieveGrantYOLO() {
+		final double totalincomemax = 100000.00;
+		
+		return getHouseWithTotalIncome("<", totalincomemax);
+	}
+	
 	@Override
 	public boolean isHouseIdExists(int houseid) {
 		boolean ret = false;
@@ -466,6 +522,355 @@ public class MOMDAOImpl implements MOMDAO {
         }		
 		
 		return ret;
+	}
+
+	private List<HouseholdMember> getHouseholdMembers(String houseid) {
+		List<HouseholdMember> ret = null;
+		
+		String sql = "SELECT * FROM HOUSEHOLD ";
+		if (!houseid.equalsIgnoreCase("all"))
+			sql += "WHERE HOUSEID=? ";
+		sql += "ORDER BY HOUSEID ASC";
+
+        Connection conn = getConnection(true);
+        
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            if (!houseid.equalsIgnoreCase("all")) {
+                ps.setString(1, houseid);
+            }
+            ResultSet rs = ps.executeQuery();
+            
+            if (!rs.next()) {
+            	ret = null;
+            } else {
+            	ret = new ArrayList<HouseholdMember>();
+            	do {
+            		ret.add( new HouseholdMember(rs.getInt("houseid"), rs.getInt("personid")) );
+            	} while (rs.next());
+            }
+            
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+			System.out.println("Error in getHouseholdMembers(): " + e.getMessage());
+            throw new RuntimeException(e);
+        } finally {
+        	closeConnection(conn);
+        }		
+		
+		return ret;
+	}
+	
+	private String getHouseholdType(int houseid) {
+		String ret = null;
+		
+		String sql = "select ht.housetype from house h, cfg_house_type ht " +
+				"where h.housetypeid=ht.housetypeid and h.houseid = ?";
+
+        Connection conn = getConnection(true);
+        
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, houseid);
+
+            ResultSet rs = ps.executeQuery();
+            
+            if (!rs.next()) {
+            	ret = null;
+            } else {
+            	ret = rs.getString(1);
+            }
+            
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+			System.out.println("Error in getHouseholdType(): " + e.getMessage());
+            throw new RuntimeException(e);
+        } finally {
+        	closeConnection(conn);
+        }		
+		
+		return ret;
+	}
+	
+	private Person getPerson(int personid) {
+		Person ret = null;
+		
+        String sql = "SELECT * FROM PERSON WHERE PERSONID=?";
+        Connection conn = getConnection(true);
+        
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, personid);
+            ResultSet rs = ps.executeQuery();
+            
+            if (rs.next())
+            	ret = new Person(rs.getInt("personid"), rs.getString("name"), rs.getString("gender"), 
+            			rs.getString("maritalid"), rs.getInt("spouse"), rs.getString("occupationid"),
+            			rs.getDouble("annualincome"), new Date(rs.getTimestamp("dob").getTime()));
+            	
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+			System.out.println("Error in getPerson(): " + e.getMessage());
+            throw new RuntimeException(e);
+        } finally {
+        	closeConnection(conn);
+        }		
+		
+		return ret;
+	}
+
+	private PersonNoSpouse getPersonNoSpouse(int personid) {
+		PersonNoSpouse ret = null;
+		
+        String sql = "SELECT * FROM PERSON WHERE PERSONID=?";
+        Connection conn = getConnection(true);
+        
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, personid);
+            ResultSet rs = ps.executeQuery();
+            
+            if (rs.next())
+            	ret = new PersonNoSpouse(rs.getString("name"), rs.getString("gender"), 
+            			rs.getString("maritalid"), rs.getString("occupationid"),
+            			rs.getDouble("annualincome"), new Date(rs.getTimestamp("dob").getTime()));
+            	
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+			System.out.println("Error in getPerson(): " + e.getMessage());
+            throw new RuntimeException(e);
+        } finally {
+        	closeConnection(conn);
+        }		
+		
+		return ret;
+	}
+
+	private List<Integer> getHouseidWithTotalIncome(String condition, double amount) {
+		List<Integer> ret = new ArrayList<Integer>();
+		
+        String sql = "select hh.houseid, sum(p.annualincome) as totalincome "
+        		+ "from household hh, person p "
+        		+ "where hh.personid = p.personid "
+        		+ "group by hh.houseid ";
+        
+        if (condition.equals("<") || condition.equals("<=") || condition.equals("=") ||
+        		condition.equals(">") || condition.equals(">=")) {
+            sql += "having sum(p.annualincome) " + condition + " ? ";
+        } else {
+        	return ret;
+        }
+        Connection conn = getConnection(true);
+        
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setDouble(1, amount);
+            ResultSet rs = ps.executeQuery();
+            
+            if (rs.next()) {
+            	ret = new ArrayList<Integer>();
+            	do {
+            		ret.add(rs.getInt(1));
+            	} while (rs.next());
+            }
+            	
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+			System.out.println("Error in getHouseWithTotalIncome(): " + e.getMessage());
+            throw new RuntimeException(e);
+        } finally {
+        	closeConnection(conn);
+        }		
+		
+		return ret;
+	}
+
+	private List<House> getHouseWithTotalIncome(String condition, double amount) {
+		List<House> ret = new ArrayList<House>();
+		
+        String sql = "select hh.houseid, h.housetypeid, sum(p.annualincome) as totalincome "
+        		+ "from household hh, person p, house h "
+        		+ "where hh.personid = p.personid and hh.houseid = h.houseid "
+        		+ "group by hh.houseid ";
+        
+        if (condition.equals("<") || condition.equals("<=") || condition.equals("=") ||
+        		condition.equals(">") || condition.equals(">=")) {
+            sql += "having sum(p.annualincome) " + condition + " ? ";
+        } else {
+        	return ret;
+        }
+        Connection conn = getConnection(true);
+        
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setDouble(1, amount);
+            ResultSet rs = ps.executeQuery();
+            
+            if (rs.next()) {
+            	do {
+            		ret.add(new House(rs.getInt("houseid"), rs.getString("housetypeid")));
+            	} while (rs.next());
+            }
+            	
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+			System.out.println("Error in getHouseWithTotalIncome(): " + e.getMessage());
+            throw new RuntimeException(e);
+        } finally {
+        	closeConnection(conn);
+        }		
+		
+		return ret;
+	}
+
+	private List<Integer> getHouseWithHouseType(String housetypeid) {
+		List<Integer> ret = new ArrayList<Integer>();
+		
+        String sql = "select distinct hh.houseid "
+        		+ "from household hh, house h "
+        		+ "where hh.houseid=h.houseid and h.housetypeid='" + housetypeid + "' ";
+        
+        Connection conn = getConnection(true);
+        
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery();
+            
+            if (rs.next()) {
+            	ret = new ArrayList<Integer>();
+            	do {
+            		ret.add(rs.getInt(1));
+            	} while (rs.next());
+            }
+            	
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+			System.out.println("Error in getHouseWithTotalIncome(): " + e.getMessage());
+            throw new RuntimeException(e);
+        } finally {
+        	closeConnection(conn);
+        }		
+		
+		return ret;
+	}
+
+	private List<Household> getHouseWithHusbandAndWife() {
+		List<Household> ret = new ArrayList<Household>();
+		
+        String sql = "select hh.houseid, h.housetypeid, "
+        		+ "(select housetype from cfg_house_type where housetypeid = h.housetypeid) as housetype, p.* "
+        		+ "from person p, house h, household hh "
+        		+ "where hh.personid = p.personid "
+        		+ "and hh.houseid=h.houseid "
+        		+ "and exists "
+        		+ "(select pp.personid "
+        		+ " from person pp, household hhhh "
+        		+ " where hhhh.personid = p.personid "
+        		+ " and pp.maritalid = '" + MOMConstants.MARITAL_ID_MARRIED + "' and pp.spouse = p.personid and hhhh.houseid = hh.houseid) "
+        		+ "order by hh.houseid asc; ";
+        
+        Connection conn = getConnection(true);
+        
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery();
+            
+            if (rs.next()) {
+            	int uniquehouseid = rs.getInt("houseid");
+            	String uniquehousetype = rs.getString("housetype");
+            	List<Person> personList = new ArrayList<Person>();
+            	do {
+            		if (uniquehouseid != rs.getInt("houseid")) {
+            			ret.add(new Household(uniquehouseid, uniquehousetype, personList));
+
+            			uniquehouseid = rs.getInt("houseid");
+                		uniquehousetype = rs.getString("housetype");
+                		personList = new ArrayList<Person>();
+            		}
+            		personList.add(new Person(rs.getInt("personid"), rs.getString("name"), rs.getString("gender"), 
+                			rs.getString("maritalid"), rs.getInt("spouse"), rs.getString("occupationid"),
+                			rs.getDouble("annualincome"), new Date(rs.getTimestamp("dob").getTime())));
+            	} while (rs.next());
+            	ret.add(new Household(uniquehouseid, uniquehousetype, personList));
+            }
+            	
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+			System.out.println("Error in getHouseWithHusbandAndWife(): " + e.getMessage());
+            throw new RuntimeException(e);
+        } finally {
+        	closeConnection(conn);
+        }		
+		
+		return ret;
+	}
+
+	private List<Household> getHouseWithPersonAge(String condition, int age, boolean isStudent) {
+		List<Household> ret = new ArrayList<Household>();
+		
+        String sql = "select hh.houseid, h.housetypeid, "
+        		+ "(select housetype from cfg_house_type where housetypeid = h.housetypeid) as housetype, "
+        		+ "TIMESTAMPDIFF(YEAR, p.dob, CURDATE()) AS age, p.* "
+        		+ "from household hh, person p, house h "
+        		+ "where hh.personid = p.personid "
+        		+ "and hh.houseid = h.houseid ";
+        
+        if (condition.equals("<") || condition.equals("<=") || condition.equals("=") ||
+        		condition.equals(">") || condition.equals(">=")) {
+        	sql += "and TIMESTAMPDIFF(YEAR, p.dob, CURDATE()) " + condition + " ? ";
+        } else {
+        	return null;
+        }
+        
+        if (isStudent) {
+    		sql += "and p.occupationid = '" + MOMConstants.OCCUPATION_STUDENT + "' ";
+        }
+		sql += "order by hh.houseid asc ";
+        
+        Connection conn = getConnection(true);
+        
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, age);
+            ResultSet rs = ps.executeQuery();
+            
+            if (rs.next()) {
+            	int uniquehouseid = rs.getInt("houseid");
+            	String uniquehousetype = rs.getString("housetype");
+            	List<Person> personList = new ArrayList<Person>();
+            	do {
+            		if (uniquehouseid != rs.getInt("houseid")) {
+            			ret.add(new Household(uniquehouseid, uniquehousetype, personList));
+
+            			uniquehouseid = rs.getInt("houseid");
+                		uniquehousetype = rs.getString("housetype");
+                		personList = new ArrayList<Person>();
+            		}
+            		personList.add(new Person(rs.getInt("personid"), rs.getString("name"), rs.getString("gender"), 
+                			rs.getString("maritalid"), rs.getInt("spouse"), rs.getString("occupationid"),
+                			rs.getDouble("annualincome"), new Date(rs.getTimestamp("dob").getTime())));
+            	} while (rs.next());
+            	ret.add(new Household(uniquehouseid, uniquehousetype, personList));
+            }
+            	
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+			System.out.println("Error in getHouseWithPersonAge(): " + e.getMessage());
+            throw new RuntimeException(e);
+        } finally {
+        	closeConnection(conn);
+        }		
+		
+        return ret;
 	}
 
 	

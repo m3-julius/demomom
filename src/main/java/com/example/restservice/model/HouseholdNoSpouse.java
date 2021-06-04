@@ -4,16 +4,16 @@ import java.util.List;
 
 public class HouseholdNoSpouse {
 	
-	private final int houseid;
+	private final String housetype;
 	private final List<PersonNoSpouse> members;
 	
-	public HouseholdNoSpouse(int houseid, List<PersonNoSpouse> members) {
-		this.houseid = houseid;
+	public HouseholdNoSpouse(String housetype, List<PersonNoSpouse> members) {
+		this.housetype = housetype;
 		this.members = members;
 	}
 
-	public int getHouseid() {
-		return houseid;
+	public String getHousetype() {
+		return housetype;
 	}
 
 	public List<PersonNoSpouse> getMembers() {

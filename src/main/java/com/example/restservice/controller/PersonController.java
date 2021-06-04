@@ -89,15 +89,15 @@ public class PersonController {
 			error += "Parameter 'maritalid' is empty or invalid (accepted input is S [Single] or M [Married]). ";
 		}
 		
-		if (maritalid.equals(MOMConstants.MARITAL_ID_MARRIED) && GenericValidator.isBlankOrNull(spouse)) {
-			error += "Parameter 'spouse' is required as the maritalid is Married. ";
-		}
+//		if (maritalid.equals(MOMConstants.MARITAL_ID_MARRIED) && GenericValidator.isBlankOrNull(spouse)) {
+//			error += "Parameter 'spouse' is required as the maritalid is Married. ";
+//		}
 		
 		if (!GenericValidator.isBlankOrNull(spouse)) {
 			if (!StringUtils.isNumeric(spouse))
 				error += "Parameter 'spouse' is not numeric. ";
-			else if (!momDAO.isPersonIdExists(Integer.parseInt(spouse)))
-				error += "'spouse' " + spouse + " does not exists. ";
+//			else if (!momDAO.isPersonIdExists(Integer.parseInt(spouse)))
+//				error += "'spouse' " + spouse + " does not exists. ";
 		}
 		
 		if (GenericValidator.isBlankOrNull(occupationid) || !isValidOccupationId(occupationid)) {

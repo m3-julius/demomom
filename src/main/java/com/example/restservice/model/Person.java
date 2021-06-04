@@ -4,6 +4,7 @@ import java.util.Date;
 
 public class Person {
 	
+	private final int personid;
 	private final String name;
 	private final String gender;
 	private final String maritalid;
@@ -12,8 +13,9 @@ public class Person {
 	private final double annualincome;
 	private final Date dob;
 	
-	public Person(String name, String gender, String maritalid, int spouse, String occupationid,
+	public Person(int personid, String name, String gender, String maritalid, int spouse, String occupationid,
 			double annualincome, Date dob) {
+		this.personid = personid;
 		this.name = name;
 		this.gender = gender;
 		this.maritalid = maritalid;
@@ -23,6 +25,10 @@ public class Person {
 		this.dob = dob;
 	}
 	
+	public int getPersonid() {
+		return personid;
+	}
+
 	public String getName() {
 		return name;
 	}
