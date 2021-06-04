@@ -8,13 +8,17 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
-import org.springframework.web.bind.annotation.RequestParam;
+import org.apache.commons.lang3.StringUtils;
 
 import com.example.dao.MOMDAO;
+import com.example.restservice.model.Household;
+import com.example.restservice.model.HouseholdMember;
+import com.example.restservice.model.HouseholdNoSpouse;
+import com.example.restservice.model.Person;
+import com.example.restservice.model.PersonNoSpouse;
 
 public class MOMDAOImpl implements MOMDAO {
 	
@@ -116,7 +120,7 @@ public class MOMDAOImpl implements MOMDAO {
 	        ps.setString(1, name);
 	        ps.setString(2, gender);
 	        ps.setString(3, maritalid);
-	        ps.setString(4, spouse);
+	        ps.setString(4, (StringUtils.isBlank(spouse) ? null : spouse));
 	        ps.setString(5, occupationid);
 	        ps.setDouble(6, annualincome);
 	        ps.setTimestamp(7, new Timestamp(dob.getTime()));
@@ -191,7 +195,7 @@ public class MOMDAOImpl implements MOMDAO {
 	public List<String> getValidMaritalIdList() {
 		List<String> maritalIdList = new ArrayList<String>();
 		
-        String sql = "SELECT * FROM CFG_MARITAL_STATUS";
+        String sql = "SELECT MARITALID FROM CFG_MARITAL_STATUS";
         Connection conn = getConnection(true);
         
         try {
@@ -217,7 +221,7 @@ public class MOMDAOImpl implements MOMDAO {
 	public List<String> getValidHouseTypeIdList() {
 		List<String> houseTypeIdList = new ArrayList<String>();
 		
-        String sql = "SELECT * FROM CFG_HOUSE_TYPE";
+        String sql = "SELECT HOUSETYPEID FROM CFG_HOUSE_TYPE";
         Connection conn = getConnection(true);
         
         try {
@@ -243,7 +247,7 @@ public class MOMDAOImpl implements MOMDAO {
 	public List<String> getValidOccupationIdList() {
 		List<String> occupationIdList = new ArrayList<String>();
 		
-        String sql = "SELECT * FROM CFG_OCCUPATION";
+        String sql = "SELECT OCCUPATIONID FROM CFG_OCCUPATION";
         Connection conn = getConnection(true);
         
         try {
@@ -263,6 +267,151 @@ public class MOMDAOImpl implements MOMDAO {
         }
         
         return occupationIdList;
+	}
+	
+	@Override
+	public List<Household> retrieveHouseholdData(String houseid) {
+		List<Household> householdList = null;
+
+		List<HouseholdMember> housememberList = getHouseholdMembers(houseid);
+		if (housememberList != null) {
+			householdList = new ArrayList<Household>();
+			
+			int uniquehouseid = -1;
+			List<Person> personList = new ArrayList<Person>();
+			for (int i=0; i<housememberList.size(); i++) {
+				HouseholdMember member = housememberList.get(i);
+				
+				if (i == 0) {
+					uniquehouseid = member.getHouseid();
+				} else if (uniquehouseid != member.getHouseid()) {
+					householdList.add(new Household(uniquehouseid, personList));
+					
+					uniquehouseid = member.getHouseid();
+					personList = new ArrayList<Person>();
+				}
+				
+				personList.add(getPerson(member.getPersonid()));
+				if (i == housememberList.size()-1) {
+					householdList.add(new Household(uniquehouseid, personList));
+				}
+			}
+		}
+		
+		return householdList;
+	}
+	
+	@Override
+	public List<HouseholdNoSpouse> retrieveHouseholdNoSpouse(String houseid) {
+		List<HouseholdNoSpouse> householdList = null;
+
+		List<HouseholdMember> housememberList = getHouseholdMembers(houseid);
+		if (housememberList != null) {
+			householdList = new ArrayList<HouseholdNoSpouse>();
+			
+			List<PersonNoSpouse> personList = new ArrayList<PersonNoSpouse>();
+			for (HouseholdMember member : housememberList) {
+				personList.add(getPersonNoSpouse(member.getPersonid()));
+			}
+			
+			householdList.add(new HouseholdNoSpouse(housememberList.get(0).getHouseid(), personList));
+		}
+		
+		return householdList;
+	}
+	
+	private List<HouseholdMember> getHouseholdMembers(String houseid) {
+		List<HouseholdMember> ret = null;
+		
+		String sql = "SELECT * FROM HOUSEHOLD ";
+		if (!houseid.equalsIgnoreCase("all"))
+			sql += "WHERE HOUSEID=? ";
+		sql += "ORDER BY HOUSEID ASC";
+
+        Connection conn = getConnection(true);
+        
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            if (!houseid.equalsIgnoreCase("all")) {
+                ps.setString(1, houseid);
+            }
+            ResultSet rs = ps.executeQuery();
+            
+            if (!rs.next()) {
+            	ret = null;
+            } else {
+            	ret = new ArrayList<HouseholdMember>();
+            	do {
+            		ret.add( new HouseholdMember(rs.getInt("houseid"), rs.getInt("personid")) );
+            	} while (rs.next());
+            }
+            
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+			System.out.println("Error in getHouseholdMembers(): " + e.getMessage());
+            throw new RuntimeException(e);
+        } finally {
+        	closeConnection(conn);
+        }		
+		
+		return ret;
+	}
+	
+	private Person getPerson(int personid) {
+		Person ret = null;
+		
+        String sql = "SELECT * FROM PERSON WHERE PERSONID=?";
+        Connection conn = getConnection(true);
+        
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, personid);
+            ResultSet rs = ps.executeQuery();
+            
+            if (rs.next())
+            	ret = new Person(rs.getString("name"), rs.getString("gender"), 
+            			rs.getString("maritalid"), rs.getInt("spouse"), rs.getString("occupationid"),
+            			rs.getDouble("annualincome"), new Date(rs.getTimestamp("dob").getTime()));
+            	
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+			System.out.println("Error in getPerson(): " + e.getMessage());
+            throw new RuntimeException(e);
+        } finally {
+        	closeConnection(conn);
+        }		
+		
+		return ret;
+	}
+
+	private PersonNoSpouse getPersonNoSpouse(int personid) {
+		PersonNoSpouse ret = null;
+		
+        String sql = "SELECT * FROM PERSON WHERE PERSONID=?";
+        Connection conn = getConnection(true);
+        
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, personid);
+            ResultSet rs = ps.executeQuery();
+            
+            if (rs.next())
+            	ret = new PersonNoSpouse(rs.getString("name"), rs.getString("gender"), 
+            			rs.getString("maritalid"), rs.getString("occupationid"),
+            			rs.getDouble("annualincome"), new Date(rs.getTimestamp("dob").getTime()));
+            	
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+			System.out.println("Error in getPerson(): " + e.getMessage());
+            throw new RuntimeException(e);
+        } finally {
+        	closeConnection(conn);
+        }		
+		
+		return ret;
 	}
 
 	@Override
@@ -318,6 +467,6 @@ public class MOMDAOImpl implements MOMDAO {
 		
 		return ret;
 	}
-	
+
 	
 }

@@ -16,17 +16,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.example.constants.MOMConstants;
 import com.example.dao.MOMDAO;
-import com.example.restservice.model.Household;
+import com.example.restservice.model.HouseholdMember;
 
 @RestController
 public class PersonController {
-	private final String GENDER_MALE = "M";
-	private final String GENDER_FEMALE = "F";
-	private final String MARITAL_ID_MARRIED = "M";
-	private final String OCCUPATION_ID_EMPLOYED = "EM";
-	private final String DATE_PATTERN_DDMMYYYY = "ddMMyyyy";
-	
 	ApplicationContext context = 
     		new ClassPathXmlApplicationContext("Spring-Module.xml");
 	MOMDAO momDAO = (MOMDAO) context.getBean("momDAO");
@@ -35,7 +30,7 @@ public class PersonController {
 	private List<String> cfgOccupationIdList = momDAO.getValidOccupationIdList();
 	
 	@GetMapping("/createhouseholdmember")
-	public Household inserthousemember(
+	public HouseholdMember inserthousemember(
 			@RequestParam(value = "houseid") String houseid,
 			@RequestParam(value = "name") String name,
 			@RequestParam(value = "gender") String gender,
@@ -47,13 +42,13 @@ public class PersonController {
 			) 
 	{
 		String validationerror = validateHousememberInputs(houseid, name, gender, maritalid, spouse, occupationid, annualincome, dob);
-		if (!validationerror.isEmpty()) {
+		if (!StringUtils.isBlank(validationerror)) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, validationerror);
 		}
 
 		try {
 			int houseidint = Integer.parseInt(houseid);
-			SimpleDateFormat sdfrmt = new SimpleDateFormat(DATE_PATTERN_DDMMYYYY);
+			SimpleDateFormat sdfrmt = new SimpleDateFormat(MOMConstants.DATE_PATTERN_DDMMYYYY);
 			Date dobDate = sdfrmt.parse(dob);
 			
 			int newpersonid = momDAO.insertHouseholdMember(houseidint, name, gender, maritalid, spouse, occupationid, Double.parseDouble(annualincome), dobDate);
@@ -62,7 +57,7 @@ public class PersonController {
 				throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred: Household member is not created.");
 			}
 			
-			return new Household(houseidint, newpersonid);
+			return new HouseholdMember(houseidint, newpersonid);
 			
 		} catch (Exception e) {
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred: " + e.getMessage(), e);
@@ -94,7 +89,7 @@ public class PersonController {
 			error += "Parameter 'maritalid' is empty or invalid (accepted input is S [Single] or M [Married]). ";
 		}
 		
-		if (maritalid.equals(MARITAL_ID_MARRIED) && GenericValidator.isBlankOrNull(spouse)) {
+		if (maritalid.equals(MOMConstants.MARITAL_ID_MARRIED) && GenericValidator.isBlankOrNull(spouse)) {
 			error += "Parameter 'spouse' is required as the maritalid is Married. ";
 		}
 		
@@ -123,7 +118,7 @@ public class PersonController {
 	private boolean isValidGender(String gender) {
 		boolean ret = false;
 		
-		if (gender.equals(GENDER_MALE) || gender.equals(GENDER_FEMALE)) {
+		if (gender.equals(MOMConstants.GENDER_MALE) || gender.equals(MOMConstants.GENDER_FEMALE)) {
 			ret = true;
 		} else {
 			ret = false;
@@ -141,7 +136,7 @@ public class PersonController {
 	}
 
 	private boolean isDatePatternValid(String strDate) {
-		SimpleDateFormat sdfrmt = new SimpleDateFormat(DATE_PATTERN_DDMMYYYY);
+		SimpleDateFormat sdfrmt = new SimpleDateFormat(MOMConstants.DATE_PATTERN_DDMMYYYY);
 		sdfrmt.setLenient(false);
 
 		try {
