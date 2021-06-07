@@ -1,41 +1,20 @@
 NOTE: This guide assume you are testing on Windows environment.
 
-RUNNING SOURCE LOCALLY
-----------------------
-1. Download source codes from GitHub:
-   https://github.com/m3-julius/demomom
-
-2. Using Eclipse IDE, choose to Import Existing Maven Project and select the folder where you downloaded the source codes.
-   File -> Import -> Existing Maven Project (elect the pom.xml item and click Finish)
-
-3. Let Eclipse build the project or from the menu: Project -> Clean
-
-4. To compile and build the package, right click on demo project and select Run As -> Maven install
-   "BUILD SUCCESS" from console should be displayed when done.
-
-5. Before running the application, please ensure to install the MySQL DB first.
-   Refer to the MySQL installation section.
-
-6. To run the application, execute from command prompt at the source codes folder (Windows):
-   .\mvnw spring-boot:run
-   You should see a log "...Application availability state ReadinessState changed to ACCEPTING_TRAFFIC"
-   This means the application is ready and listening to the local port (8080).
-
-7. To terminate, press Ctrl+C from the command prompt and answer y to terminate.
-
 MYSQL INSTALLATION
 ------------------
 1. Download and install MySQL Community:
 https://dev.mysql.com/downloads/installer/
 
-2. Execute the installation: Choose Developer recommended installation
+2. Execute the installation: Choose Developer Default installation
+   * At the Check Requirements, resolve any missing requirements before proceeding.
+   * At Installation, click on Execute to install MySQL. You'll be then able to configure at the next step.
    a) Type and Networking
       Config Type: Development Computer
 	  TCP/IP checked: Default port 3306 and X protocol port 33060
-	  Default is checked for Open Window Firewall
+	  Default is checked for Open Window Firewall ports
 	  Click Next when done
    b) Authentication Method
-      Just leave it with default values
+      Just leave it with default values (Use Strong Password Encryption)
 	  Click Next button
    c) Accounts and Roles
       Root password: root
@@ -71,9 +50,31 @@ source C:\tmp\2_insert_config.sql
 
 When done, all the tables should be created and ready to use.
 To test, try to run a query below:
-select * from cfg_house_type;
+select * from house;
 
 It should return en empty row.
+
+RUNNING SOURCE LOCALLY
+----------------------
+1. Download source codes from GitHub:
+   https://github.com/m3-julius/demomom
+
+2. Using Eclipse IDE, choose to Import Existing Maven Project and select the folder where you downloaded the source codes.
+   File -> Import -> Existing Maven Project (elect the pom.xml item and click Finish)
+
+3. Let Eclipse build the project or from the menu: Project -> Clean
+   Note: Please ensure the Eclipse is configured for a JDK environment. This application requires JDK libraries.
+         If necessary, please set a proper JRE environment from Project Properties -> Java Build Path -> Libraries tab -> JRE System Library -> Edit and point to jdk. You may download and install the jdk from Oracle website and add it into your eclipse configuration.
+
+4. To compile and build the package, right click on demo project and select Run As -> Maven install
+   "BUILD SUCCESS" from console should be displayed when done.
+
+5. To run the application, execute from command prompt at the source codes folder (Windows):
+   .\mvnw spring-boot:run
+   You should see a log "...Application availability state ReadinessState changed to ACCEPTING_TRAFFIC"
+   This means the application is ready and listening to the local port (8080).
+
+6. To terminate, press Ctrl+C from the command prompt and answer y to terminate.
 
 REST Endpoints Usage
 --------------------
@@ -105,12 +106,11 @@ curl -i "http://localhost:8080/createhouseholdmember?houseid=<houseid>&name=<nam
 <dob> input: Required - Date pattern is ddmmyyyy (example: 05092020 [for 5 Sep 2020])
 
 Assumptions:
-- There's no check if insertion is of the same person data (example: person's name, gender, dob and so on)
-- A person must be attached to the household mapping table. This is just following the assessment's request.
+- A person must be attached to the household mapping table. This is following the assessment's request.
   With that assumption, I don't create separate endpoints to insert a standalone person & a mapping to a house.
 - To make a couple link, first create a new member without entering the spouse (personid).
   After that, create a new second member with spouse value.
-  The application will automatically detect if the person exists in the DB and in Married status.
+  The application will automatically detect if the spouse personid exists in the DB, in Married status and the spouse value is still null.
   If yes, the first person's spouse value will be updated to the second person's personid.
   If no, the second member insertion is deemed as failed and insertion will be rollbacked.
   Illustration as below:
@@ -128,6 +128,7 @@ Assumptions:
 Example:
 (without spouse and annualincome parameters)
 curl -i "http://localhost:8080/createhouseholdmember?houseid=1&name=John%20Doe&gender=M&maritalid=M&occupationid=UN&dob=11102018"
+
 (complete parameters)
 curl -i "http://localhost:8080/createhouseholdmember?houseid=1&name=Jane%20Jackson&gender=F&maritalid=M&spouse=2&occupationid=EM&annualincome=50000.25&dob=11102018"
 

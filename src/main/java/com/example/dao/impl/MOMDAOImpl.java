@@ -236,10 +236,12 @@ public class MOMDAOImpl implements MOMDAO {
         PreparedStatement ps;
 		try {
 			ps = conn.prepareStatement(sql);
-	        ps.setInt(1, spouse);
+			if (spouse == 0)
+				ps.setString(1, null);
+			else
+				ps.setInt(1, spouse);
 	        ps.setInt(2, targetperson);
 	        result = ps.executeUpdate();
-	        System.out.println("updatePerson result " + result);
 
 	        ps.close();
 		} catch (SQLException e) {
@@ -252,6 +254,12 @@ public class MOMDAOImpl implements MOMDAO {
 	
 	public int deletePerson(Connection conn, int personid) {
 		int result = 0;
+		
+        String spouseid = getSpouseidOfPerson(conn, personid);
+        System.out.println("spouseid " + spouseid);
+        if (spouseid != null) {
+        	updatePerson(conn, Integer.parseInt(spouseid), 0);
+        }
 		
         String sql = "delete from person where personid = ?";
         
@@ -275,7 +283,8 @@ public class MOMDAOImpl implements MOMDAO {
 		
         String sql = "select * from household hh, person p where hh.personid = p.personid "
         		+ "and hh.personid = ? "
-        		+ "and p.maritalid='" + MOMConstants.MARITAL_ID_MARRIED + "' ";
+        		+ "and p.maritalid='" + MOMConstants.MARITAL_ID_MARRIED + "' "
+        		+ "and spouse is null ";
         Connection conn = getConnection(true);
         
         try {
@@ -357,12 +366,13 @@ public class MOMDAOImpl implements MOMDAO {
 
 		int houseid = getHouseidOfPerson(personid);
 		
-        String sql = "delete from household where houseid = ?";
+        String sql = "delete from household where houseid = ? and personid = ?";
         Connection conn = getConnection(false);
         PreparedStatement ps;
 		try {
 			ps = conn.prepareStatement(sql);
 	        ps.setInt(1, houseid);
+	        ps.setInt(2, personid);
 	        result = ps.executeUpdate();
 	        
 	        ps.close();
@@ -564,9 +574,7 @@ public class MOMDAOImpl implements MOMDAO {
 				
 				for (int j=0; j<houseWithChild.size(); j++) {
 					Household hc = houseWithChild.get(j);
-					System.out.println("h.houseid: " + h.getHouseid() + ", hc.houseid: " + hc.getHouseid());
 					if (h.getHouseid() == hc.getHouseid()) {
-						System.out.println("child-parent connection found, add list");
 						List<Person> newlist = new ArrayList<Person>();
 						newlist.addAll(h.getMembers());
 						newlist.addAll(hc.getMembers());
@@ -802,6 +810,29 @@ public class MOMDAOImpl implements MOMDAO {
         	closeConnection(conn);
         }		
 		
+		return ret;
+	}
+
+	private String getSpouseidOfPerson(Connection conn, int personid) {
+		String ret = null;
+		
+        String sql = "SELECT SPOUSE FROM PERSON WHERE PERSONID=?";
+        
+        try {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, personid);
+            ResultSet rs = ps.executeQuery();
+            
+            if (rs.next())
+            	ret = rs.getString(1);
+            	
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+			System.out.println("Error in getSpouseidOfPerson(): " + e.getMessage());
+            throw new RuntimeException(e);
+        }
+        
 		return ret;
 	}
 
