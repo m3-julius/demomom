@@ -124,6 +124,9 @@ Assumptions:
 	name	personid	maritalid	spouse
 	Jack	2			M			3
 	Jill	3			M			2
+- A married couple in this application only accepts monogamy couple.
+  From the illustation above, if there is another insertion with spouse value of a personid that already has a mapping, the insertion
+  will be rejected.
 
 Example:
 (without spouse and annualincome parameters)

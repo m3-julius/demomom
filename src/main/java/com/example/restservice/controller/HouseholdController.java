@@ -80,6 +80,8 @@ public class HouseholdController {
 			
 			if (newpersonid == -1) {
 				throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred: Household member is not created.");
+			} else if (newpersonid == -2) {
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Error occurred: personid of 'spouse' already have a spouse mapping.");
 			}
 			
 			return new HouseholdMap(houseidint, newpersonid);
