@@ -18,7 +18,7 @@ import com.example.restservice.model.House;
 import com.example.restservice.model.Household;
 
 @RestController
-public class HouseController {
+public class HouseholdController {
 	ApplicationContext context = 
     		new ClassPathXmlApplicationContext("Spring-Module.xml");
 	MOMDAO momDAO = (MOMDAO) context.getBean("momDAO");
