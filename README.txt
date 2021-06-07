@@ -1,4 +1,4 @@
-NOTE: This guide assume you are testing on Windows environment.
+NOTE: This guide assume you are using Windows environment.
 
 MYSQL INSTALLATION
 ------------------
@@ -40,7 +40,7 @@ https://dev.mysql.com/downloads/installer/
 - 0_create_database.sql
 - 1_create_tables.sql
 - 2_insert_config.sql
-You may want to copy it to a convenient path so the it is not too long (eg. C:\tmp folder)
+You may want to copy it to a convenient path so it is not too long (eg. C:\tmp folder)
 
 4. Open MySQL 8.0 Command Line Client shortcut, enter root password (root)
 Execute scripts with the commands below (for example if the sql script files under C:\tmp folder):
