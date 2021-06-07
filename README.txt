@@ -66,13 +66,14 @@ RUNNING SOURCE LOCALLY
    Note: Please ensure the Eclipse is configured for a JDK environment. This application requires JDK libraries.
          If necessary, please set a proper JRE environment from Project Properties -> Java Build Path -> Libraries tab -> JRE System Library -> Edit and point to jdk. You may download and install the jdk from Oracle website and add it into your eclipse configuration.
 
-4. To compile and build the package, right click on demo project and select Run As -> Maven install
-   "BUILD SUCCESS" from console should be displayed when done.
+4. In case required to compile and build the package manually, right click on demo project and select Run As -> Maven install
+   "BUILD SUCCESS" from console should be displayed when done. First run is longer as Eclipse will download the libraries.
 
 5. To run the application, execute from command prompt at the source codes folder (Windows):
    .\mvnw spring-boot:run
    You should see a log "...Application availability state ReadinessState changed to ACCEPTING_TRAFFIC"
    This means the application is ready and listening to the local port (8080).
+   Note: First run is longer as the application will download the libraries.
 
 6. To terminate, press Ctrl+C from the command prompt and answer y to terminate.
 
@@ -92,7 +93,6 @@ curl -i "http://localhost:8080/createhouse?housetype=<housetype>"
 
 Example:
 curl -i "http://localhost:8080/createhouse?housetype=H"
-
 
 b) Create a household member and link it to a house
 curl -i "http://localhost:8080/createhouseholdmember?houseid=<houseid>&name=<name>&gender=<gender>&maritalid=<maritalid>&spouse=<spouse>&occupationid=<occupationid>&annualincome=<annualincome>&dob=<dob>"
@@ -148,12 +148,15 @@ curl -i "http://localhost:8080/gethousehold?houseid=3"
 e) List for eligible Student Encouragement Bonus grant
 curl -i "http://localhost:8080/liststudentgrant"
 
+Assumptions:
+- My interpretation of the requirement is to return only the students, so not including parents in this list.
+
 f) List for eligible Family Togetherness Scheme grant
 curl -i "http://localhost:8080/listfamilygrant"
 
 Assumptions:
 - Both couple must live at the same house and has at least 1 child.
-
+- Will list both parents and the eligible child(ren) for each household.
 
 g) List for eligible Elder Bonus grant
 curl -i "http://localhost:8080/listeldergrant"

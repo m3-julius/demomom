@@ -579,6 +579,7 @@ public class MOMDAOImpl implements MOMDAO {
 						newlist.addAll(h.getMembers());
 						newlist.addAll(hc.getMembers());
 						resultList.add(new Household(h.getHouseid(), h.getHousetype(), newlist));
+						houseWithChild.remove(j);
 						break;
 					}
 				}
