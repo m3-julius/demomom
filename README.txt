@@ -105,10 +105,12 @@ curl -i "http://localhost:8080/createhouseholdmember?houseid=<houseid>&name=<nam
 <dob> input: Required - Date pattern is ddmmyyyy (example: 05092020 [for 5 Sep 2020])
 
 Assumptions:
+- There's no check if insertion is of the same person data (example: person's name, gender, dob and so on)
 - To make a couple link, first create a new member without entering the spouse (personid).
   After that, create a new second member with spouse value.
   The application will automatically detect if the person exists in the DB and in Married status.
   If yes, the first person's spouse value will be updated to the second person's personid.
+  If no, the second member insertion is deemed as failed and insertion will be rollbacked.
   Illustration as below:
   1st member insertion:
 	name	personid	maritalid	spouse
@@ -116,7 +118,7 @@ Assumptions:
   2nd member insertion:
 	name	personid	maritalid	spouse
 	Jill	3			M			2
-  Jack's record will then updated during Jill record's insertion. Below is the final result:
+  Jack's record will then updated during Jill record's insertion if inputs are all valid. Below is the final result:
 	name	personid	maritalid	spouse
 	Jack	2			M			3
 	Jill	3			M			2
@@ -128,7 +130,7 @@ curl -i "http://localhost:8080/createhouseholdmember?houseid=1&name=John%20Doe&g
 curl -i "http://localhost:8080/createhouseholdmember?houseid=1&name=Jane%20Jackson&gender=F&maritalid=M&spouse=2&occupationid=EM&annualincome=50000.25&dob=11102018"
 
 c) List all households with its family members
-curl -i "http://localhost:8080/listallhouseholds"
+curl -i "http://localhost:8080/gethousehold?houseid=all"
 
 d) Show a household details with its family members
 curl -i "http://localhost:8080/gethousehold?houseid=<houseid>"

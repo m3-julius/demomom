@@ -6,7 +6,6 @@ import java.util.List;
 
 import com.example.restservice.model.House;
 import com.example.restservice.model.Household;
-import com.example.restservice.model.HouseholdNoSpouse;
 
 public interface MOMDAO {
 	
@@ -30,7 +29,7 @@ public interface MOMDAO {
 	
 	public List<Household> retrieveHouseholdData(String houseid);
 	
-	public List<HouseholdNoSpouse> retrieveHouseholdNoSpouse(String houseid);
+//	public List<HouseholdNoSpouse> retrieveHouseholdNoSpouse(String houseid);
 	
 	public List<Household> retrieveGrantStudentEncBonus();
 	

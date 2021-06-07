@@ -19,7 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.example.constants.MOMConstants;
 import com.example.dao.MOMDAO;
-import com.example.restservice.model.HouseholdMember;
+import com.example.restservice.model.HouseholdMap;
 
 @RestController
 public class PersonController {
@@ -31,7 +31,7 @@ public class PersonController {
 	private List<String> cfgOccupationIdList = momDAO.getValidOccupationIdList();
 	
 	@GetMapping("/createhouseholdmember")
-	public HouseholdMember inserthousemember(
+	public HouseholdMap inserthousemember(
 			@RequestParam(value = "houseid") String houseid,
 			@RequestParam(value = "name") String name,
 			@RequestParam(value = "gender") String gender,
@@ -58,7 +58,7 @@ public class PersonController {
 				throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred: Household member is not created.");
 			}
 			
-			return new HouseholdMember(houseidint, newpersonid);
+			return new HouseholdMap(houseidint, newpersonid);
 			
 		} catch (Exception e) {
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred: " + e.getMessage(), e);
@@ -117,8 +117,10 @@ public class PersonController {
 		if (!GenericValidator.isBlankOrNull(spouse)) {
 			if (!StringUtils.isNumeric(spouse))
 				error += "Parameter 'spouse' is not numeric. ";
-//			else if (!momDAO.isPersonIdExists(Integer.parseInt(spouse)))
-//				error += "'spouse' " + spouse + " does not exists. ";
+			else { 
+				if (!momDAO.isPersonIdExists(Integer.parseInt(spouse)))
+					error += "'spouse' " + spouse + " does not exists. ";
+			}
 		}
 		
 		if (GenericValidator.isBlankOrNull(occupationid) || !isValidOccupationId(occupationid)) {
