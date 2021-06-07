@@ -25,7 +25,7 @@ public class GrantController {
 		try {
 			return momDAO.retrieveGrantStudentEncBonus();
 		} catch (Exception e) {
-//			System.out.println(ExceptionUtils.getStackTrace(e));
+			System.out.println(ExceptionUtils.getStackTrace(e));
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred: " + e.getMessage(), e);
 		}
 	}
@@ -35,6 +35,7 @@ public class GrantController {
 		try {
 			return momDAO.retrieveGrantFamilyScheme();
 		} catch (Exception e) {
+			System.out.println(ExceptionUtils.getStackTrace(e));
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred: " + e.getMessage(), e);
 		}
 	}

@@ -10,15 +10,17 @@ import com.example.restservice.model.HouseholdNoSpouse;
 
 public interface MOMDAO {
 	
-	public void getTestTable();
-	
 	public int insertHouse(String housetype);
 	
 	public int insertPerson(Connection conn, String name, String gender, String maritalid,
 			String spouse, String occupationid, double annualincome, Date dob, int houseid);
 	
+	public int deleteHousehold(int houseid);
+
 	public int insertHouseholdMember(int houseid, String name, String gender, String maritalid,
 			String spouse, String occupationid, double annualincome, Date dob);
+
+	public int deleteHouseholdMember(int personid);
 	
 	public List<String> getValidMaritalIdList();
 	

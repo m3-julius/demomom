@@ -3,6 +3,7 @@ package com.example.restservice.controller;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.validator.GenericValidator;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
@@ -39,18 +40,39 @@ public class HouseController {
 
 				return new House(newhouseid, housetype);
 			} catch (Exception e) {
+				System.out.println(ExceptionUtils.getStackTrace(e));
 				throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred: " + e.getMessage(), e);
 			}
 		}
 		
 	}
 	
+	@GetMapping("/deletehousehold")
+	public String deletehousehold(@RequestParam(value = "houseid") String houseid) {
+		if (GenericValidator.isBlankOrNull(houseid) || !StringUtils.isNumeric(houseid)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'houseid' is empty or invalid (not numeric).");
+		} else {
+			try {
+				int result = momDAO.deleteHousehold(Integer.parseInt(houseid));
+				
+				if (result <= 0) {
+					return "Household houseid " + houseid + " is not deleted.";
+				} else {
+					return "Household houseid " + houseid + " and its members deleted.";
+				}
+			} catch (Exception e) {
+				System.out.println(ExceptionUtils.getStackTrace(e));
+				throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred: " + e.getMessage(), e);
+			}
+		}
+	}
+	
 	@GetMapping("/listallhouseholds")
 	public List<Household> listhouseholds() {
 		try {
 			return momDAO.retrieveHouseholdData("all");
-			
 		} catch (Exception e) {
+			System.out.println(ExceptionUtils.getStackTrace(e));
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred: " + e.getMessage(), e);
 		}
 	}
@@ -64,8 +86,8 @@ public class HouseController {
 		
 		try {
 			return momDAO.retrieveHouseholdNoSpouse(houseid);
-			
 		} catch (Exception e) {
+			System.out.println(ExceptionUtils.getStackTrace(e));
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred: " + e.getMessage(), e);
 		}
 	}

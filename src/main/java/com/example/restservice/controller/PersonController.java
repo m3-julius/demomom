@@ -6,6 +6,7 @@ import java.util.Date;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.validator.GenericValidator;
 import org.springframework.context.ApplicationContext;
@@ -63,6 +64,26 @@ public class PersonController {
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred: " + e.getMessage(), e);
 		}
 
+	}
+	
+	@GetMapping("/deletehouseholdmember")
+	public String deletehousehold(@RequestParam(value = "personid") String personid) {
+		if (GenericValidator.isBlankOrNull(personid) || !StringUtils.isNumeric(personid)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'personid' is empty or invalid (not numeric).");
+		} else {
+			try {
+				int result = momDAO.deleteHouseholdMember(Integer.parseInt(personid));
+				
+				if (result <= 0) {
+					return "Personid " + personid + " is not deleted.";
+				} else {
+					return "Personid " + personid + " is deleted.";
+				}
+			} catch (Exception e) {
+				System.out.println(ExceptionUtils.getStackTrace(e));
+				throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred: " + e.getMessage(), e);
+			}
+		}
 	}
 	
 	private String validateHousememberInputs(String houseid, String name, String gender, String maritalid, String spouse, String occupationid, String annualincome, String dob ) {
