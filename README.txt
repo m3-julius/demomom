@@ -106,6 +106,8 @@ curl -i "http://localhost:8080/createhouseholdmember?houseid=<houseid>&name=<nam
 
 Assumptions:
 - There's no check if insertion is of the same person data (example: person's name, gender, dob and so on)
+- A person must be attached to the household mapping table. This is just following the assessment's request.
+  With that assumption, I don't create separate endpoints to insert a standalone person & a mapping to a house.
 - To make a couple link, first create a new member without entering the spouse (personid).
   After that, create a new second member with spouse value.
   The application will automatically detect if the person exists in the DB and in Married status.
@@ -152,8 +154,14 @@ Assumptions:
 g) List for eligible Elder Bonus grant
 curl -i "http://localhost:8080/listeldergrant"
 
+Assumptions:
+- My interpretation of the requirement is to return only the elderly members, so not including parents in this list.
+
 h) List for eligible Baby Sunshine grant
 curl -i "http://localhost:8080/listbabygrant"
+
+Assumptions:
+- My interpretation of the requirement is to return only the child(ren) members, so not including parents in this list.
 
 i) Delete a household and its family members
 curl -i "http://localhost:8080/deletehousehold?houseid=<houseid>"
@@ -162,8 +170,9 @@ curl -i "http://localhost:8080/deletehousehold?houseid=<houseid>"
 Example:
 curl -i "http://localhost:8080/deletehousehold?houseid=12"
 
-Note:
-- House data will be deleted as well
+Assumptions:
+- House data will be deleted (Interpreted this as if the house is being demolished and doesn't exist anymore)
+- All family members will be deleted.
 
 j) Delete a family member from a household
 curl -i "http://localhost:8080/deletehouseholdmember?personid=<personid>"

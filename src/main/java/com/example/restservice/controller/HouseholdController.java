@@ -54,41 +54,6 @@ public class HouseholdController {
 		
 	}
 	
-	@GetMapping("/deletehousehold")
-	public String deletehousehold(@RequestParam(value = "houseid") String houseid) {
-		if (GenericValidator.isBlankOrNull(houseid) || !StringUtils.isNumeric(houseid)) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'houseid' is empty or invalid (not numeric).");
-		} else {
-			try {
-				int result = momDAO.deleteHousehold(Integer.parseInt(houseid));
-				
-				if (result <= 0) {
-					return "Household houseid " + houseid + " is not deleted.";
-				} else {
-					return "Household houseid " + houseid + " and its members deleted.";
-				}
-			} catch (Exception e) {
-				System.out.println(ExceptionUtils.getStackTrace(e));
-				throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred: " + e.getMessage(), e);
-			}
-		}
-	}
-	
-	@GetMapping("/gethousehold")
-	public List<Household> gethousehold(@RequestParam(value = "houseid") String houseid) {
-		String validationerror = validateHouseholdInput(houseid);
-		if (!StringUtils.isBlank(validationerror)) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, validationerror);
-		}
-		
-		try {
-			return momDAO.retrieveHouseholdData(houseid);
-		} catch (Exception e) {
-			System.out.println(ExceptionUtils.getStackTrace(e));
-			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred: " + e.getMessage(), e);
-		}
-	}
-	
 	@GetMapping("/createhouseholdmember")
 	public HouseholdMap inserthousemember(
 			@RequestParam(value = "houseid") String houseid,
@@ -123,6 +88,41 @@ public class HouseholdController {
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred: " + e.getMessage(), e);
 		}
 
+	}
+	
+	@GetMapping("/gethousehold")
+	public List<Household> gethousehold(@RequestParam(value = "houseid") String houseid) {
+		String validationerror = validateHouseholdInput(houseid);
+		if (!StringUtils.isBlank(validationerror)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, validationerror);
+		}
+		
+		try {
+			return momDAO.retrieveHouseholdData(houseid);
+		} catch (Exception e) {
+			System.out.println(ExceptionUtils.getStackTrace(e));
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred: " + e.getMessage(), e);
+		}
+	}
+	
+	@GetMapping("/deletehousehold")
+	public String deletehousehold(@RequestParam(value = "houseid") String houseid) {
+		if (GenericValidator.isBlankOrNull(houseid) || !StringUtils.isNumeric(houseid)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'houseid' is empty or invalid (not numeric).");
+		} else {
+			try {
+				int result = momDAO.deleteHousehold(Integer.parseInt(houseid));
+				
+				if (result <= 0) {
+					return "Household houseid " + houseid + " is not deleted.";
+				} else {
+					return "Household houseid " + houseid + " and its members deleted.";
+				}
+			} catch (Exception e) {
+				System.out.println(ExceptionUtils.getStackTrace(e));
+				throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred: " + e.getMessage(), e);
+			}
+		}
 	}
 	
 	@GetMapping("/deletehouseholdmember")
@@ -198,15 +198,7 @@ public class HouseholdController {
 	}
 
 	private boolean isValidGender(String gender) {
-		boolean ret = false;
-		
-		if (gender.equals(MOMConstants.GENDER_MALE) || gender.equals(MOMConstants.GENDER_FEMALE)) {
-			ret = true;
-		} else {
-			ret = false;
-		}
-		
-		return ret;
+		return gender.equals(MOMConstants.GENDER_MALE) || gender.equals(MOMConstants.GENDER_FEMALE);
 	}
 	
 	private boolean isValidMaritalId(String maritalid) {
@@ -249,7 +241,7 @@ public class HouseholdController {
 		if (GenericValidator.isBlankOrNull(houseid)) {
 			error += "Parameter 'houseid' is empty. ";
 		} else {
-			if (!houseid.equalsIgnoreCase("all") && !StringUtils.isNumeric(houseid)) {
+			if (!houseid.equalsIgnoreCase(MOMConstants.ALL) && !StringUtils.isNumeric(houseid)) {
 				error += "Parameter 'houseid' must be 'all' or a valid houseid numeric value. ";
 			} else if (StringUtils.isNumeric(houseid) && !momDAO.isHouseIdExists(Integer.parseInt(houseid))) {
 				error += "houseid " + houseid + " does not exists. ";

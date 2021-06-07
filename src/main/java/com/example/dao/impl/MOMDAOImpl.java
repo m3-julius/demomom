@@ -530,8 +530,8 @@ public class MOMDAOImpl implements MOMDAO {
 		final double totalincomemax = 150000.00;
 		final boolean isStudent = true;
 		
-		List<Integer> eligibleHouseIncome = getHouseidWithTotalIncome("<", totalincomemax);
-		List<Household> eligibleHouseAge = getHouseWithPersonAge("<", agemax, isStudent);
+		List<Integer> eligibleHouseIncome = getHouseidWithTotalIncome(MOMConstants.OP_LT, totalincomemax);
+		List<Household> eligibleHouseAge = getHouseWithPersonAge(MOMConstants.OP_LT, agemax, isStudent);
 		
 		List<Household> resultList = new ArrayList<Household>();
 
@@ -553,7 +553,7 @@ public class MOMDAOImpl implements MOMDAO {
 		final int agemax = 18;
 		final boolean isStudent = false;
 		
-		List<Household> houseWithChild = getHouseWithPersonAge("<", agemax, isStudent);
+		List<Household> houseWithChild = getHouseWithPersonAge(MOMConstants.OP_LT, agemax, isStudent);
 		List<Household> houseWithCouples = getHouseWithHusbandAndWife();
 		
 		List<Household> resultList = new ArrayList<Household>();
@@ -587,7 +587,7 @@ public class MOMDAOImpl implements MOMDAO {
 		final boolean isStudent = false;
 
 		List<Integer> houseHDB = getHouseWithHouseType(MOMConstants.HOUSETYPE_HDB);
-		List<Household> houseWithElderly = getHouseWithPersonAge(">", agemin, isStudent);
+		List<Household> houseWithElderly = getHouseWithPersonAge(MOMConstants.OP_GT, agemin, isStudent);
 		
 		List<Household> resultList = new ArrayList<Household>();
 
@@ -609,14 +609,14 @@ public class MOMDAOImpl implements MOMDAO {
 		final int agemax = 5;
 		final boolean isStudent = false;
 
-		return getHouseWithPersonAge("<", agemax, isStudent);
+		return getHouseWithPersonAge(MOMConstants.OP_LT, agemax, isStudent);
 	}
 	
 	@Override
 	public List<House> retrieveGrantYOLO() {
 		final double totalincomemax = 100000.00;
 		
-		return getHouseWithTotalIncome("<", totalincomemax);
+		return getHouseWithTotalIncome(MOMConstants.OP_LT, totalincomemax);
 	}
 	
 	@Override
@@ -683,7 +683,7 @@ public class MOMDAOImpl implements MOMDAO {
 		}
 		
 		String sql = "SELECT * FROM HOUSEHOLD ";
-		if (!houseid.equalsIgnoreCase("all"))
+		if (!houseid.equalsIgnoreCase(MOMConstants.ALL))
 			sql += "WHERE HOUSEID=? ";
 		sql += "ORDER BY HOUSEID ASC";
 
@@ -691,7 +691,7 @@ public class MOMDAOImpl implements MOMDAO {
         
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
-            if (!houseid.equalsIgnoreCase("all")) {
+            if (!houseid.equalsIgnoreCase(MOMConstants.ALL)) {
                 ps.setString(1, houseid);
             }
             ResultSet rs = ps.executeQuery();
@@ -838,7 +838,7 @@ public class MOMDAOImpl implements MOMDAO {
 //		return ret;
 //	}
 
-	private List<Integer> getHouseidWithTotalIncome(String condition, double amount) {
+	private List<Integer> getHouseidWithTotalIncome(String operator, double amount) {
 		List<Integer> ret = new ArrayList<Integer>();
 		
         String sql = "select hh.houseid, sum(p.annualincome) as totalincome "
@@ -846,9 +846,8 @@ public class MOMDAOImpl implements MOMDAO {
         		+ "where hh.personid = p.personid "
         		+ "group by hh.houseid ";
         
-        if (condition.equals("<") || condition.equals("<=") || condition.equals("=") ||
-        		condition.equals(">") || condition.equals(">=") || condition.equals("<>")) {
-            sql += "having sum(p.annualincome) " + condition + " ? ";
+        if (isValidOperator(operator)) {
+            sql += "having sum(p.annualincome) " + operator + " ? ";
         } else {
         	return ret;
         }
@@ -878,7 +877,7 @@ public class MOMDAOImpl implements MOMDAO {
 		return ret;
 	}
 
-	private List<House> getHouseWithTotalIncome(String condition, double amount) {
+	private List<House> getHouseWithTotalIncome(String operator, double amount) {
 		List<House> ret = new ArrayList<House>();
 		
         String sql = "select hh.houseid, h.housetypeid, sum(p.annualincome) as totalincome "
@@ -886,9 +885,8 @@ public class MOMDAOImpl implements MOMDAO {
         		+ "where hh.personid = p.personid and hh.houseid = h.houseid "
         		+ "group by hh.houseid ";
         
-        if (condition.equals("<") || condition.equals("<=") || condition.equals("=") ||
-        		condition.equals(">") || condition.equals(">=")) {
-            sql += "having sum(p.annualincome) " + condition + " ? ";
+        if (isValidOperator(operator)) {
+            sql += "having sum(p.annualincome) " + operator + " ? ";
         } else {
         	return ret;
         }
@@ -1004,7 +1002,7 @@ public class MOMDAOImpl implements MOMDAO {
 		return ret;
 	}
 
-	private List<Household> getHouseWithPersonAge(String condition, int age, boolean isStudent) {
+	private List<Household> getHouseWithPersonAge(String operator, int age, boolean isStudent) {
 		List<Household> ret = new ArrayList<Household>();
 		
         String sql = "select hh.houseid, h.housetypeid, "
@@ -1017,9 +1015,8 @@ public class MOMDAOImpl implements MOMDAO {
         		+ "where hh.personid = p.personid "
         		+ "and hh.houseid = h.houseid ";
         
-        if (condition.equals("<") || condition.equals("<=") || condition.equals("=") ||
-        		condition.equals(">") || condition.equals(">=") || condition.equals("<>")) {
-        	sql += "and TIMESTAMPDIFF(YEAR, p.dob, CURDATE()) " + condition + " ? ";
+        if (isValidOperator(operator)) {
+        	sql += "and TIMESTAMPDIFF(YEAR, p.dob, CURDATE()) " + operator + " ? ";
         } else {
         	return null;
         }
@@ -1071,7 +1068,7 @@ public class MOMDAOImpl implements MOMDAO {
 		List<House> houseList = new ArrayList<House>();
 		
         String sql = "SELECT * FROM HOUSE H WHERE NOT EXISTS (SELECT HOUSEID FROM HOUSEHOLD WHERE HOUSEID=H.HOUSEID) ";
-        if (!houseid.equalsIgnoreCase("all")) {
+        if (!houseid.equalsIgnoreCase(MOMConstants.ALL)) {
             sql += "AND HOUSEID = ? ";
         }
         sql += "ORDER BY HOUSEID ASC";
@@ -1079,7 +1076,7 @@ public class MOMDAOImpl implements MOMDAO {
         
         try {
             PreparedStatement ps = conn.prepareStatement(sql);
-            if (!houseid.equalsIgnoreCase("all")) {
+            if (!houseid.equalsIgnoreCase(MOMConstants.ALL)) {
                 ps.setString(1, houseid);
             }
             ResultSet rs = ps.executeQuery();
@@ -1099,5 +1096,10 @@ public class MOMDAOImpl implements MOMDAO {
         return houseList;
 	}
 
+	private boolean isValidOperator(String operator) {
+		return operator.equals(MOMConstants.OP_LT) || operator.equals(MOMConstants.OP_LE) || 
+        		operator.equals(MOMConstants.OP_EQ) || operator.equals(MOMConstants.OP_GT) || 
+        		operator.equals(MOMConstants.OP_GE) || operator.equals(MOMConstants.OP_NE);
+	}
 	
 }
