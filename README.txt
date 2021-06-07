@@ -83,6 +83,8 @@ REST Endpoints Usage
    Recommended way is to use curl from command line.
    The guides below is using curl command for execution.
    This application is listening at localhost:8080
+   You may also access this link to get the generated API documentation:
+   http://localhost:8080/api-docs/
 
 2. Below are the valid endpoints to use:
 NOTE: Anything that is wrapped with sharp brackets <value> is to be replaced with a proper input value.
