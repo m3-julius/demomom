@@ -1,11 +1,11 @@
 package com.example.restservice.model;
 
-public class HouseholdMember {
+public class HouseholdMap {
 	
 	private final int houseid;
 	private final int personid;
 	
-	public HouseholdMember(int houseid, int personid) {
+	public HouseholdMap(int houseid, int personid) {
 		this.houseid = houseid;
 		this.personid = personid;
 	}
