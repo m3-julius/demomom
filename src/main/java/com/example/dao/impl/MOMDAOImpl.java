@@ -323,7 +323,7 @@ public class MOMDAOImpl implements MOMDAO {
 				System.out.println("Error in insertHouseholdMember(): Failed to insert PERSON.");
 				conn.rollback();
 			} else if (personid == -2) {
-				System.out.println("Error in insertHouseholdMember(): Failed to insert PERSON beause the spouse's personid is invalid.");
+				System.out.println("Error in insertHouseholdMember(): Failed to insert PERSON beause the spouse's personid is already have mapping.");
 				conn.rollback();
 			} else {
 				ps = conn.prepareStatement(sql);
