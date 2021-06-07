@@ -170,7 +170,10 @@ curl -i "http://localhost:8080/listbabygrant"
 Assumptions:
 - My interpretation of the requirement is to return only the child(ren) members, so not including parents in this list.
 
-i) Delete a household and its family members
+i) List for YOLO GST grant
+curl -i "http://localhost:8080/listyologrant"
+
+j) Delete a household and its family members
 curl -i "http://localhost:8080/deletehousehold?houseid=<houseid>"
 <houseid> input: Required - Valid houseid numeric (must be existing in DB)
 
@@ -181,7 +184,7 @@ Assumptions:
 - House data will be deleted (Interpreted this as if the house is being demolished and doesn't exist anymore)
 - All family members will be deleted.
 
-j) Delete a family member from a household
+k) Delete a family member from a household
 curl -i "http://localhost:8080/deletehouseholdmember?personid=<personid>"
 <personid> input: Required - Valid personid numeric (must be existing in DB)
 

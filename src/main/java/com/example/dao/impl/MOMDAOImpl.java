@@ -624,8 +624,21 @@ public class MOMDAOImpl implements MOMDAO {
 	@Override
 	public List<House> retrieveGrantYOLO() {
 		final double totalincomemax = 100000.00;
+
+		List<Integer> houseHDB = getHouseWithHouseType(MOMConstants.HOUSETYPE_HDB);
+		List<House> houseYOLO = getHouseWithTotalIncome(MOMConstants.OP_LT, totalincomemax);
 		
-		return getHouseWithTotalIncome(MOMConstants.OP_LT, totalincomemax);
+		List<House> resultList = new ArrayList<House>();
+
+		if (houseHDB != null && houseYOLO != null) {
+			for (House h : houseYOLO) {
+				if (houseHDB.contains(h.getHouseid())) {
+					resultList.add(h);
+				}
+			}
+		}
+		
+		return resultList;
 	}
 	
 	@Override
