@@ -83,8 +83,11 @@ REST Endpoints Usage
    Recommended way is to use curl from command line.
    The guides below is using curl command for execution.
    This application is listening at localhost:8080
-   You may also access this link to get the generated API documentation:
+   You may also access this link to get the API documentation:
+   springdoc-openapi:
    http://localhost:8080/api-docs/
+   Swagger UI:
+   http://localhost:8080/swagger-ui.html
 
 2. Below are the valid endpoints to use:
 NOTE: Anything that is wrapped with sharp brackets <value> is to be replaced with a proper input value.
